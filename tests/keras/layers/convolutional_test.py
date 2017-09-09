@@ -630,9 +630,28 @@ def test_zero_padding_3d():
 
 @keras_test
 def test_upsampling_1d():
+    num_samples = 2
+    stack_size = 2
+    input_size = 11
+
+    inputs = np.random.rand(num_samples, input_size, stack_size)
+
     layer_test(convolutional.UpSampling1D,
                kwargs={'size': 2},
                input_shape=(3, 5, 4))
+
+    for upsampling_factor in [2,3]:
+
+        layer = convolutional.UpSampling1D(size=upsampling_factor)
+        layer.build(inputs.shape)
+        outputs = layer(K.variable(inputs))
+        np_output = K.eval(outputs)
+
+        expected_out = np.repeat(inputs, upsampling_factor, axis=1)
+
+        assert np_output.shape[1] == upsampling_factor * input_size
+        assert_allclose(np_output, expected_out)
+
 
 
 @keras_test
