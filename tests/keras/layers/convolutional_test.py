@@ -640,17 +640,25 @@ def test_upsampling_1d():
                kwargs={'size': 2},
                input_shape=(3, 5, 4))
 
-    for upsampling_factor in [2,3]:
+    for fill in ['repeat','zeros']:
+        for upsampling_factor in [2,3]:
 
-        layer = convolutional.UpSampling1D(size=upsampling_factor)
-        layer.build(inputs.shape)
-        outputs = layer(K.variable(inputs))
-        np_output = K.eval(outputs)
+            layer = convolutional.UpSampling1D(
+                size=upsampling_factor,
+                fill=fill)
+            layer.build(inputs.shape)
+            outputs = layer(K.variable(inputs))
+            np_output = K.eval(outputs)
 
-        expected_out = np.repeat(inputs, upsampling_factor, axis=1)
+            if fill == 'repeat':
+                expected_out = np.repeat(inputs, upsampling_factor, axis=1)
+            else:
+                expected_out = np.zeros((
+                    num_samples, upsampling_factor*input_size, stack_size))
+                expected_out[:,::upsampling_factor,:] = inputs[:,:,:]
 
-        assert np_output.shape[1] == upsampling_factor * input_size
-        assert_allclose(np_output, expected_out)
+            assert np_output.shape[1] == upsampling_factor * input_size
+            assert_allclose(np_output, expected_out)
 
 
 

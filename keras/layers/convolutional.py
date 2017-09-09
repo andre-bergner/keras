@@ -1270,6 +1270,12 @@ class UpSampling1D(Layer):
 
     # Arguments
         size: integer. Upsampling factor.
+        fill: A string,
+            one of `repeat` (default) or `zeros`.
+            Defines how the holes between the values will be filled after upsampling.
+            `repeat` will repeat the previous value.
+            `zeros` fills the holes with zeros.
+
 
     # Input shape
         3D tensor with shape: `(batch, steps, features)`.
@@ -1279,18 +1285,37 @@ class UpSampling1D(Layer):
     """
 
     @interfaces.legacy_upsampling1d_support
-    def __init__(self, size=2, **kwargs):
+    def __init__(self, size=2, fill='repeat', **kwargs):
         super(UpSampling1D, self).__init__(**kwargs)
         self.size = int(size)
         self.input_spec = InputSpec(ndim=3)
+
+        fill_modes = { 'repeat' : self._call_repeat
+                     , 'zeros'  : self._call_zeros }
+
+        if fill not in fill_modes.keys():
+            raise ValueError(
+                'The `mode` argument must be one of "' +
+                '", "'.join(fill_modes.keys()) + '". Received: ' + str(fill))
+
+        self.call = fill_modes[fill]
+
 
     def compute_output_shape(self, input_shape):
         size = self.size * input_shape[1] if input_shape[1] is not None else None
         return (input_shape[0], size, input_shape[2])
 
-    def call(self, inputs):
+    def _call_repeat(self, inputs):
         output = K.repeat_elements(inputs, self.size, axis=1)
         return output
+
+    def _call_zeros(self, inputs):
+        shape = K.shape(inputs)
+        input_with_zeros = K.stack([
+            inputs, *(K.zeros_like(inputs) for _ in range(self.size-1)) ])
+        return K.reshape(
+            K.permute_dimensions(input_with_zeros, (1,2,0,3)),
+            [-1, self.size * shape[1],shape[2]])
 
     def get_config(self):
         config = {'size': self.size}
