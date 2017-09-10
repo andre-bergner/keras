@@ -628,13 +628,28 @@ def test_zero_padding_3d():
             assert_allclose(np_output[:, :, 1:-2, 3:-4, 0:-2], 1.)
 
 
+def _interleave_zeros(x, factor=(1,2,1)):
+    assert len(x.shape) == len(factor)
+    new_shape = [ a*b for a,b in zip(x.shape, factor) ]
+    result = np.zeros(new_shape)
+    result[::factor[0], ::factor[1], ::factor[2]] = x[:,:,:]
+    return result
+
+
+
 @keras_test
 def test_upsampling_1d():
     num_samples = 2
-    stack_size = 2
     input_size = 11
+    stack_size = 2
 
     inputs = np.random.rand(num_samples, input_size, stack_size)
+    expected = {
+        'repeat2' : np.repeat(inputs, 2, axis=1),
+        'repeat3' : np.repeat(inputs, 3, axis=1),
+        'zeros2'  : _interleave_zeros(inputs, (1,2,1)),
+        'zeros3'  : _interleave_zeros(inputs, (1,3,1))
+    }
 
     layer_test(convolutional.UpSampling1D,
                kwargs={'size': 2},
@@ -650,15 +665,8 @@ def test_upsampling_1d():
             outputs = layer(K.variable(inputs))
             np_output = K.eval(outputs)
 
-            if fill == 'repeat':
-                expected_out = np.repeat(inputs, upsampling_factor, axis=1)
-            else:
-                expected_out = np.zeros((
-                    num_samples, upsampling_factor*input_size, stack_size))
-                expected_out[:,::upsampling_factor,:] = inputs[:,:,:]
-
             assert np_output.shape[1] == upsampling_factor * input_size
-            assert_allclose(np_output, expected_out)
+            assert_allclose(np_output, expected[fill+str(upsampling_factor)])
 
 
 
