@@ -1399,34 +1399,29 @@ class UpSampling2D(Layer):
         return K.resize_images(inputs, self.size[0], self.size[1],
                                self.data_format)
 
+    def _call_zeros_impl(self, inputs, order1, shape1, order2, shape2):
+        input_with_zeros = K.stack([
+            inputs, *(K.zeros_like(inputs) for _ in range(self.size[0]-1)) ])
+        rows_interleaved = K.reshape(
+            K.permute_dimensions(input_with_zeros, order1), shape1)
+        input_with_more_zeros = K.stack([
+            rows_interleaved, *(K.zeros_like(rows_interleaved) for _ in range(self.size[1]-1)) ])
+        return K.reshape(
+            K.permute_dimensions(input_with_more_zeros, order2), shape2)
 
     def _call_channels_first_zeros(self, inputs):
         shape = K.shape(inputs)
-        input_with_zeros = K.stack([
-            inputs, *(K.zeros_like(inputs) for _ in range(self.size[0]-1)) ])
-        rows_interleaved = K.reshape(
-            K.permute_dimensions(input_with_zeros, (1,2,3,0,4)),
-            [-1, shape[1], self.size[0] * shape[2], shape[3]])
-        input_with_more_zeros = K.stack([
-            rows_interleaved, *(K.zeros_like(rows_interleaved) for _ in range(self.size[1]-1)) ])
-        return K.reshape(
-            K.permute_dimensions(input_with_more_zeros, (1,2,3,4,0)),
-            [-1, shape[1], self.size[0] * shape[2], self.size[1] * shape[3]])
-
+        return self._call_zeros_impl(
+            inputs,
+            (1,2,3,0,4), [-1, shape[1], self.size[0] * shape[2], shape[3]],
+            (1,2,3,4,0), [-1, shape[1], self.size[0] * shape[2], self.size[1] * shape[3]])
 
     def _call_channels_last_zeros(self, inputs):
         shape = K.shape(inputs)
-        input_with_zeros = K.stack([
-            inputs, *(K.zeros_like(inputs) for _ in range(self.size[0]-1)) ])
-        rows_interleaved = K.reshape(
-            K.permute_dimensions(input_with_zeros, (1,2,0,3,4)),
-            [-1, self.size[0] * shape[1], shape[2], shape[3]])
-        input_with_more_zeros = K.stack([
-            rows_interleaved, *(K.zeros_like(rows_interleaved) for _ in range(self.size[1]-1)) ])
-        return K.reshape(
-            K.permute_dimensions(input_with_more_zeros, (1,2,3,0,4)),
-            [-1, self.size[0] * shape[1], self.size[1] * shape[2], shape[3]])
-
+        return self._call_zeros_impl(
+            inputs,
+            (1,2,0,3,4), [-1, self.size[0] * shape[1], shape[2], shape[3]],
+            (1,2,3,0,4), [-1, self.size[0] * shape[1], self.size[1] * shape[2], shape[3]])
 
     def get_config(self):
         config = {'size': self.size,
