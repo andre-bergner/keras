@@ -628,11 +628,18 @@ def test_zero_padding_3d():
             assert_allclose(np_output[:, :, 1:-2, 3:-4, 0:-2], 1.)
 
 
+
 def _interleave_zeros(x, factor=(1,2,1)):
     assert len(x.shape) == len(factor)
     new_shape = [ a*b for a,b in zip(x.shape, factor) ]
     result = np.zeros(new_shape)
-    result[::factor[0], ::factor[1], ::factor[2]] = x[:,:,:]
+    if len(x.shape) == 3:
+        result[::factor[0], ::factor[1], ::factor[2]] = x[:,:,:]
+    elif len(x.shape) == 4:
+        result[::factor[0], ::factor[1], ::factor[2], ::factor[3]] = x[:,:,:,:]
+    else:   # len(x.shape) == 5:
+        result[::factor[0], ::factor[1], ::factor[2], ::factor[3], ::factor[4]] = x[:,:,:,:,:]
+
     return result
 
 
@@ -655,7 +662,7 @@ def test_upsampling_1d():
                kwargs={'size': 2},
                input_shape=(3, 5, 4))
 
-    for fill in ['repeat','zeros']:
+    for fill in ['repeat', 'zeros']:
         for upsampling_factor in [2,3]:
 
             layer = convolutional.UpSampling1D(
@@ -690,14 +697,16 @@ def test_upsampling_2d():
                    kwargs={'size': (2, 2), 'data_format': data_format},
                    input_shape=inputs.shape)
 
-        for length_row in [2]:
-            for length_col in [2, 3]:
+        for fill in ['repeat', 'zeros']:
+            for length_row, length_col in [ [2,2], [2,3], [3,2] ]:
                 layer = convolutional.UpSampling2D(
                     size=(length_row, length_col),
-                    data_format=data_format)
+                    data_format=data_format,
+                    fill=fill)
                 layer.build(inputs.shape)
                 outputs = layer(K.variable(inputs))
                 np_output = K.eval(outputs)
+
                 if data_format == 'channels_first':
                     assert np_output.shape[2] == length_row * input_num_row
                     assert np_output.shape[3] == length_col * input_num_col
@@ -707,11 +716,17 @@ def test_upsampling_2d():
 
                 # compare with numpy
                 if data_format == 'channels_first':
-                    expected_out = np.repeat(inputs, length_row, axis=2)
-                    expected_out = np.repeat(expected_out, length_col, axis=3)
+                    if fill == 'repeat':
+                        expected_out = np.repeat(inputs, length_row, axis=2)
+                        expected_out = np.repeat(expected_out, length_col, axis=3)
+                    else:
+                        expected_out = _interleave_zeros(inputs, [1, 1, length_row, length_col])
                 else:  # tf
-                    expected_out = np.repeat(inputs, length_row, axis=1)
-                    expected_out = np.repeat(expected_out, length_col, axis=2)
+                    if fill == 'repeat':
+                        expected_out = np.repeat(inputs, length_row, axis=1)
+                        expected_out = np.repeat(expected_out, length_col, axis=2)
+                    else:
+                        expected_out = _interleave_zeros(inputs, [1, length_row, length_col, 1])
 
                 assert_allclose(np_output, expected_out)
 
