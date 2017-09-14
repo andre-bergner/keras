@@ -1308,8 +1308,8 @@ class UpSampling1D(Layer):
 
     def _call_zeros(self, inputs):
         shape = K.shape(inputs)
-        input_with_zeros = K.stack([
-            inputs, *(K.zeros_like(inputs) for _ in range(self.size - 1))])
+        input_with_zeros = K.stack(
+            [inputs] + [K.zeros_like(inputs) for _ in range(self.size - 1)])
         return K.reshape(
             K.permute_dimensions(input_with_zeros, (1, 2, 0, 3)),
             [-1, self.size * shape[1], shape[2]])
@@ -1399,12 +1399,12 @@ class UpSampling2D(Layer):
                                self.data_format)
 
     def _call_zeros_impl(self, inputs, order1, shape1, order2, shape2):
-        input_with_zeros = K.stack([
-            inputs, *(K.zeros_like(inputs) for _ in range(self.size[0] - 1))])
+        input_with_zeros = K.stack(
+            [inputs] + [K.zeros_like(inputs) for _ in range(self.size[0] - 1)])
         rows_interleaved = K.reshape(
             K.permute_dimensions(input_with_zeros, order1), shape1)
-        rows_interleaved_zeros = K.stack([
-            rows_interleaved, *(K.zeros_like(rows_interleaved) for _ in range(self.size[1] - 1))])
+        rows_interleaved_zeros = K.stack(
+            [rows_interleaved] + [K.zeros_like(rows_interleaved) for _ in range(self.size[1] - 1)])
         return K.reshape(
             K.permute_dimensions(rows_interleaved_zeros, order2), shape2)
 
@@ -1513,16 +1513,16 @@ class UpSampling3D(Layer):
                                 self.data_format)
 
     def _call_zeros_impl(self, inputs, order1, shape1, order2, shape2, order3, shape3):
-        input_with_zeros = K.stack([
-            inputs, *(K.zeros_like(inputs) for _ in range(self.size[0] - 1))])
+        input_with_zeros = K.stack(
+            [inputs] + [K.zeros_like(inputs) for _ in range(self.size[0] - 1)])
         dim1_interleaved = K.reshape(
             K.permute_dimensions(input_with_zeros, order1), shape1)
-        dim1_interleaved_zeros = K.stack([
-            dim1_interleaved, *(K.zeros_like(dim1_interleaved) for _ in range(self.size[1] - 1))])
+        dim1_interleaved_zeros = K.stack(
+            [dim1_interleaved] + [K.zeros_like(dim1_interleaved) for _ in range(self.size[1] - 1)])
         dim2_interleaved = K.reshape(
             K.permute_dimensions(dim1_interleaved_zeros, order2), shape2)
-        dim2_interleaved_zeros = K.stack([
-            dim2_interleaved, *(K.zeros_like(dim2_interleaved) for _ in range(self.size[2] - 1))])
+        dim2_interleaved_zeros = K.stack(
+            [dim2_interleaved] + [K.zeros_like(dim2_interleaved) for _ in range(self.size[2] - 1)])
         return K.reshape(
             K.permute_dimensions(dim2_interleaved_zeros, order3), shape3)
 
