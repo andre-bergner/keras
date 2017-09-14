@@ -1471,10 +1471,10 @@ class UpSampling3D(Layer):
 
     @interfaces.legacy_upsampling3d_support
     def __init__(self, size=(2, 2, 2), data_format=None, fill='repeat', **kwargs):
+        super(UpSampling3D, self).__init__(**kwargs)
         self.data_format = conv_utils.normalize_data_format(data_format)
         self.size = conv_utils.normalize_tuple(size, 3, 'size')
         self.input_spec = InputSpec(ndim=5)
-        super(UpSampling3D, self).__init__(**kwargs)
 
         fill_modes = { 'channels_first_repeat' : self._call_repeat
                      , 'channels_last_repeat'  : self._call_repeat
