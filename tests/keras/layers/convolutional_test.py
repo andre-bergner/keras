@@ -761,34 +761,30 @@ def test_upsampling_3d():
                    kwargs={'size': (2, 2, 2), 'data_format': data_format},
                    input_shape=inputs.shape)
 
-        for length_dim1 in [2, 3]:
-            for length_dim2 in [2]:
+        for fill in ['repeat', 'zeros']:
+            for length_dim1,length_dim2 in [ [2,2], [3,2] ]:
                 for length_dim3 in [3]:
                     layer = convolutional.UpSampling3D(
                         size=(length_dim1, length_dim2, length_dim3),
-                        data_format=data_format)
+                        data_format=data_format,
+                        fill=fill)
                     layer.build(inputs.shape)
                     outputs = layer(K.variable(inputs))
                     np_output = K.eval(outputs)
-                    if data_format == 'channels_first':
-                        assert np_output.shape[2] == length_dim1 * input_len_dim1
-                        assert np_output.shape[3] == length_dim2 * input_len_dim2
-                        assert np_output.shape[4] == length_dim3 * input_len_dim3
-                    else:  # tf
-                        assert np_output.shape[1] == length_dim1 * input_len_dim1
-                        assert np_output.shape[2] == length_dim2 * input_len_dim2
-                        assert np_output.shape[3] == length_dim3 * input_len_dim3
 
                     # compare with numpy
                     if data_format == 'channels_first':
-                        expected_out = np.repeat(inputs, length_dim1, axis=2)
-                        expected_out = np.repeat(expected_out, length_dim2, axis=3)
-                        expected_out = np.repeat(expected_out, length_dim3, axis=4)
+                        if fill == 'repeat':
+                            expected_out = _repeat(inputs, [1,1,length_dim1,length_dim2,length_dim3])
+                        else:
+                            expected_out = _interleave_zeros(inputs, [1,1,length_dim1,length_dim2,length_dim3])
                     else:  # tf
-                        expected_out = np.repeat(inputs, length_dim1, axis=1)
-                        expected_out = np.repeat(expected_out, length_dim2, axis=2)
-                        expected_out = np.repeat(expected_out, length_dim3, axis=3)
+                        if fill == 'repeat':
+                            expected_out = _repeat(inputs, [1,length_dim1,length_dim2,length_dim3,1])
+                        else:
+                            expected_out = _interleave_zeros(inputs, [1,length_dim1,length_dim2,length_dim3,1])
 
+                    assert np_output.shape == expected_out.shape
                     assert_allclose(np_output, expected_out)
 
 

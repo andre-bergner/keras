@@ -1449,6 +1449,10 @@ class UpSampling3D(Layer):
             It defaults to the `image_data_format` value found in your
             Keras config file at `~/.keras/keras.json`.
             If you never set it, then it will be "channels_last".
+        fill: A string, one of `repeat` (default) or `zeros`.
+            Defines how the holes between the values will be filled after upsampling.
+            `repeat` will repeat the previous value.
+            `zeros` fills the holes with zeros.
 
     # Input shape
         5D tensor with shape:
@@ -1466,11 +1470,23 @@ class UpSampling3D(Layer):
     """
 
     @interfaces.legacy_upsampling3d_support
-    def __init__(self, size=(2, 2, 2), data_format=None, **kwargs):
+    def __init__(self, size=(2, 2, 2), data_format=None, fill='repeat', **kwargs):
         self.data_format = conv_utils.normalize_data_format(data_format)
         self.size = conv_utils.normalize_tuple(size, 3, 'size')
         self.input_spec = InputSpec(ndim=5)
         super(UpSampling3D, self).__init__(**kwargs)
+
+        fill_modes = { 'channels_first_repeat' : self._call_repeat
+                     , 'channels_last_repeat'  : self._call_repeat
+                     , 'channels_first_zeros'  : self._call_channels_first_zeros
+                     , 'channels_last_zeros'   : self._call_channels_last_zeros }
+
+        if fill not in ['repeat', 'zeros']:
+            raise ValueError(
+                'The `mode` argument must be one of "' +
+                '", "'.join(fill_modes.keys()) + '". Received: ' + str(fill))
+
+        self.call = fill_modes[data_format+'_'+fill]
 
     def compute_output_shape(self, input_shape):
         if self.data_format == 'channels_first':
@@ -1492,10 +1508,40 @@ class UpSampling3D(Layer):
                     dim3,
                     input_shape[4])
 
-    def call(self, inputs):
+    def _call_repeat(self, inputs):
         return K.resize_volumes(inputs,
                                 self.size[0], self.size[1], self.size[2],
                                 self.data_format)
+
+    def _call_zeros_impl(self, inputs, order1, shape1, order2, shape2, order3, shape3):
+        input_with_zeros = K.stack([
+            inputs, *(K.zeros_like(inputs) for _ in range(self.size[0]-1)) ])
+        dim1_interleaved = K.reshape(
+            K.permute_dimensions(input_with_zeros, order1), shape1)
+        dim1_interleaved_zeros = K.stack([
+            dim1_interleaved, *(K.zeros_like(dim1_interleaved) for _ in range(self.size[1]-1)) ])
+        dim2_interleaved = K.reshape(
+            K.permute_dimensions(dim1_interleaved_zeros, order2), shape2)
+        dim2_interleaved_zeros = K.stack([
+            dim2_interleaved, *(K.zeros_like(dim2_interleaved) for _ in range(self.size[2]-1)) ])
+        return K.reshape(
+            K.permute_dimensions(dim2_interleaved_zeros, order3), shape3)
+
+    def _call_channels_first_zeros(self, inputs):
+        shape = K.shape(inputs)
+        return self._call_zeros_impl(
+            inputs,
+            (1,2,3,0,4,5), [-1, shape[1], self.size[0] * shape[2],                shape[3],                shape[4]],
+            (1,2,3,4,0,5), [-1, shape[1], self.size[0] * shape[2], self.size[1] * shape[3],                shape[4]],
+            (1,2,3,4,5,0), [-1, shape[1], self.size[0] * shape[2], self.size[1] * shape[3], self.size[2] * shape[4]])
+
+    def _call_channels_last_zeros(self, inputs):
+        shape = K.shape(inputs)
+        return self._call_zeros_impl(
+            inputs,
+            (1,2,0,3,4,5), [-1, self.size[0] * shape[1],                shape[2],                shape[3], shape[4]],
+            (1,2,3,0,4,5), [-1, self.size[0] * shape[1], self.size[1] * shape[2],                shape[3], shape[4]],
+            (1,2,3,4,0,5), [-1, self.size[0] * shape[1], self.size[1] * shape[2], self.size[2] * shape[3], shape[4]])
 
     def get_config(self):
         config = {'size': self.size,
