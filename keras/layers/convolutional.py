@@ -1288,8 +1288,8 @@ class UpSampling1D(Layer):
         self.size = int(size)
         self.input_spec = InputSpec(ndim=3)
 
-        fill_modes = { 'repeat' : self._call_repeat
-                     , 'zeros'  : self._call_zeros }
+        fill_modes = {'repeat': self._call_repeat,
+                      'zeros': self._call_zeros}
 
         if fill not in fill_modes.keys():
             raise ValueError(
@@ -1297,7 +1297,6 @@ class UpSampling1D(Layer):
                 '", "'.join(fill_modes.keys()) + '". Received: ' + str(fill))
 
         self.call = fill_modes[fill]
-
 
     def compute_output_shape(self, input_shape):
         size = self.size * input_shape[1] if input_shape[1] is not None else None
@@ -1310,10 +1309,10 @@ class UpSampling1D(Layer):
     def _call_zeros(self, inputs):
         shape = K.shape(inputs)
         input_with_zeros = K.stack([
-            inputs, *(K.zeros_like(inputs) for _ in range(self.size-1)) ])
+            inputs, *(K.zeros_like(inputs) for _ in range(self.size - 1))])
         return K.reshape(
-            K.permute_dimensions(input_with_zeros, (1,2,0,3)),
-            [-1, self.size * shape[1],shape[2]])
+            K.permute_dimensions(input_with_zeros, (1, 2, 0, 3)),
+            [-1, self.size * shape[1], shape[2]])
 
     def get_config(self):
         config = {'size': self.size}
@@ -1367,17 +1366,17 @@ class UpSampling2D(Layer):
         self.size = conv_utils.normalize_tuple(size, 2, 'size')
         self.input_spec = InputSpec(ndim=4)
 
-        fill_modes = { 'channels_first_repeat' : self._call_repeat
-                     , 'channels_last_repeat'  : self._call_repeat
-                     , 'channels_first_zeros'  : self._call_channels_first_zeros
-                     , 'channels_last_zeros'   : self._call_channels_last_zeros }
+        fill_modes = {'channels_first_repeat': self._call_repeat,
+                      'channels_last_repeat': self._call_repeat,
+                      'channels_first_zeros': self._call_channels_first_zeros,
+                      'channels_last_zeros': self._call_channels_last_zeros}
 
         if fill not in ['repeat', 'zeros']:
             raise ValueError(
                 'The `mode` argument must be one of "' +
                 '", "'.join(fill_modes.keys()) + '". Received: ' + str(fill))
 
-        self.call = fill_modes[data_format+'_'+fill]
+        self.call = fill_modes[data_format + '_' + fill]
 
     def compute_output_shape(self, input_shape):
         if self.data_format == 'channels_first':
@@ -1401,27 +1400,27 @@ class UpSampling2D(Layer):
 
     def _call_zeros_impl(self, inputs, order1, shape1, order2, shape2):
         input_with_zeros = K.stack([
-            inputs, *(K.zeros_like(inputs) for _ in range(self.size[0]-1)) ])
+            inputs, *(K.zeros_like(inputs) for _ in range(self.size[0] - 1))])
         rows_interleaved = K.reshape(
             K.permute_dimensions(input_with_zeros, order1), shape1)
-        input_with_more_zeros = K.stack([
-            rows_interleaved, *(K.zeros_like(rows_interleaved) for _ in range(self.size[1]-1)) ])
+        rows_interleaved_zeros = K.stack([
+            rows_interleaved, *(K.zeros_like(rows_interleaved) for _ in range(self.size[1] - 1))])
         return K.reshape(
-            K.permute_dimensions(input_with_more_zeros, order2), shape2)
+            K.permute_dimensions(rows_interleaved_zeros, order2), shape2)
 
     def _call_channels_first_zeros(self, inputs):
         shape = K.shape(inputs)
         return self._call_zeros_impl(
             inputs,
-            (1,2,3,0,4), [-1, shape[1], self.size[0] * shape[2], shape[3]],
-            (1,2,3,4,0), [-1, shape[1], self.size[0] * shape[2], self.size[1] * shape[3]])
+            (1, 2, 3, 0, 4), [-1, shape[1], self.size[0] * shape[2], shape[3]],
+            (1, 2, 3, 4, 0), [-1, shape[1], self.size[0] * shape[2], self.size[1] * shape[3]])
 
     def _call_channels_last_zeros(self, inputs):
         shape = K.shape(inputs)
         return self._call_zeros_impl(
             inputs,
-            (1,2,0,3,4), [-1, self.size[0] * shape[1], shape[2], shape[3]],
-            (1,2,3,0,4), [-1, self.size[0] * shape[1], self.size[1] * shape[2], shape[3]])
+            (1, 2, 0, 3, 4), [-1, self.size[0] * shape[1], shape[2], shape[3]],
+            (1, 2, 3, 0, 4), [-1, self.size[0] * shape[1], self.size[1] * shape[2], shape[3]])
 
     def get_config(self):
         config = {'size': self.size,
@@ -1476,17 +1475,17 @@ class UpSampling3D(Layer):
         self.size = conv_utils.normalize_tuple(size, 3, 'size')
         self.input_spec = InputSpec(ndim=5)
 
-        fill_modes = { 'channels_first_repeat' : self._call_repeat
-                     , 'channels_last_repeat'  : self._call_repeat
-                     , 'channels_first_zeros'  : self._call_channels_first_zeros
-                     , 'channels_last_zeros'   : self._call_channels_last_zeros }
+        fill_modes = {'channels_first_repeat': self._call_repeat,
+                      'channels_last_repeat': self._call_repeat,
+                      'channels_first_zeros': self._call_channels_first_zeros,
+                      'channels_last_zeros': self._call_channels_last_zeros}
 
         if fill not in ['repeat', 'zeros']:
             raise ValueError(
                 'The `mode` argument must be one of "' +
                 '", "'.join(fill_modes.keys()) + '". Received: ' + str(fill))
 
-        self.call = fill_modes[data_format+'_'+fill]
+        self.call = fill_modes[data_format + '_' + fill]
 
     def compute_output_shape(self, input_shape):
         if self.data_format == 'channels_first':
@@ -1515,33 +1514,35 @@ class UpSampling3D(Layer):
 
     def _call_zeros_impl(self, inputs, order1, shape1, order2, shape2, order3, shape3):
         input_with_zeros = K.stack([
-            inputs, *(K.zeros_like(inputs) for _ in range(self.size[0]-1)) ])
+            inputs, *(K.zeros_like(inputs) for _ in range(self.size[0] - 1))])
         dim1_interleaved = K.reshape(
             K.permute_dimensions(input_with_zeros, order1), shape1)
         dim1_interleaved_zeros = K.stack([
-            dim1_interleaved, *(K.zeros_like(dim1_interleaved) for _ in range(self.size[1]-1)) ])
+            dim1_interleaved, *(K.zeros_like(dim1_interleaved) for _ in range(self.size[1] - 1))])
         dim2_interleaved = K.reshape(
             K.permute_dimensions(dim1_interleaved_zeros, order2), shape2)
         dim2_interleaved_zeros = K.stack([
-            dim2_interleaved, *(K.zeros_like(dim2_interleaved) for _ in range(self.size[2]-1)) ])
+            dim2_interleaved, *(K.zeros_like(dim2_interleaved) for _ in range(self.size[2] - 1))])
         return K.reshape(
             K.permute_dimensions(dim2_interleaved_zeros, order3), shape3)
 
     def _call_channels_first_zeros(self, inputs):
-        shape = K.shape(inputs)
+        sh = K.shape(inputs)
+        up = self.size
         return self._call_zeros_impl(
             inputs,
-            (1,2,3,0,4,5), [-1, shape[1], self.size[0] * shape[2],                shape[3],                shape[4]],
-            (1,2,3,4,0,5), [-1, shape[1], self.size[0] * shape[2], self.size[1] * shape[3],                shape[4]],
-            (1,2,3,4,5,0), [-1, shape[1], self.size[0] * shape[2], self.size[1] * shape[3], self.size[2] * shape[4]])
+            (1, 2, 3, 0, 4, 5), [-1, sh[1], up[0] * sh[2], sh[3], sh[4]],
+            (1, 2, 3, 4, 0, 5), [-1, sh[1], up[0] * sh[2], up[1] * sh[3], sh[4]],
+            (1, 2, 3, 4, 5, 0), [-1, sh[1], up[0] * sh[2], up[1] * sh[3], up[2] * sh[4]])
 
     def _call_channels_last_zeros(self, inputs):
-        shape = K.shape(inputs)
+        sh = K.shape(inputs)
+        up = self.size
         return self._call_zeros_impl(
             inputs,
-            (1,2,0,3,4,5), [-1, self.size[0] * shape[1],                shape[2],                shape[3], shape[4]],
-            (1,2,3,0,4,5), [-1, self.size[0] * shape[1], self.size[1] * shape[2],                shape[3], shape[4]],
-            (1,2,3,4,0,5), [-1, self.size[0] * shape[1], self.size[1] * shape[2], self.size[2] * shape[3], shape[4]])
+            (1, 2, 0, 3, 4, 5), [-1, up[0] * sh[1], sh[2], sh[3], sh[4]],
+            (1, 2, 3, 0, 4, 5), [-1, up[0] * sh[1], up[1] * sh[2], sh[3], sh[4]],
+            (1, 2, 3, 4, 0, 5), [-1, up[0] * sh[1], up[1] * sh[2], up[2] * sh[3], sh[4]])
 
     def get_config(self):
         config = {'size': self.size,

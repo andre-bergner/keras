@@ -628,7 +628,7 @@ def test_zero_padding_3d():
             assert_allclose(np_output[:, :, 1:-2, 3:-4, 0:-2], 1.)
 
 
-def _repeat(x, factors=(1,2,1)):
+def _repeat(x, factors):
     assert len(x.shape) == len(factors)
     result = np.repeat(x, factors[0], axis=0)
     for axis, factor in enumerate(factors):
@@ -636,19 +636,18 @@ def _repeat(x, factors=(1,2,1)):
     return result
 
 
-def _interleave_zeros(x, factors=(1,2,1)):
+def _interleave_zeros(x, factors):
     assert len(x.shape) == len(factors)
-    new_shape = [ a*b for a,b in zip(x.shape, factors) ]
+    new_shape = [a * b for a, b in zip(x.shape, factors)]
     result = np.zeros(new_shape)
     if len(x.shape) == 3:
-        result[::factors[0], ::factors[1], ::factors[2]] = x[:,:,:]
+        result[::factors[0], ::factors[1], ::factors[2]] = x[:, :, :]
     elif len(x.shape) == 4:
-        result[::factors[0], ::factors[1], ::factors[2], ::factors[3]] = x[:,:,:,:]
+        result[::factors[0], ::factors[1], ::factors[2], ::factors[3]] = x[:, :, :, :]
     else:   # len(x.shape) == 5:
-        result[::factors[0], ::factors[1], ::factors[2], ::factors[3], ::factors[4]] = x[:,:,:,:,:]
+        result[::factors[0], ::factors[1], ::factors[2], ::factors[3], ::factors[4]] = x[:, :, :, :, :]
 
     return result
-
 
 
 @keras_test
@@ -659,10 +658,10 @@ def test_upsampling_1d():
 
     inputs = np.random.rand(num_samples, input_size, stack_size)
     expected = {
-        'repeat2' : np.repeat(inputs, 2, axis=1),
-        'repeat3' : np.repeat(inputs, 3, axis=1),
-        'zeros2'  : _interleave_zeros(inputs, (1,2,1)),
-        'zeros3'  : _interleave_zeros(inputs, (1,3,1))
+        'repeat2': _repeat(inputs, [1, 2, 1]),
+        'repeat3': _repeat(inputs, [1, 3, 1]),
+        'zeros2': _interleave_zeros(inputs, [1, 2, 1]),
+        'zeros3': _interleave_zeros(inputs, [1, 3, 1])
     }
 
     layer_test(convolutional.UpSampling1D,
@@ -670,7 +669,7 @@ def test_upsampling_1d():
                input_shape=(3, 5, 4))
 
     for fill in ['repeat', 'zeros']:
-        for upsampling_factor in [2,3]:
+        for upsampling_factor in [2, 3]:
 
             layer = convolutional.UpSampling1D(
                 size=upsampling_factor,
@@ -679,10 +678,9 @@ def test_upsampling_1d():
             outputs = layer(K.variable(inputs))
             np_output = K.eval(outputs)
 
-            test_key = fill+str(upsampling_factor)
+            test_key = fill + str(upsampling_factor)
             assert np_output.shape == expected[test_key].shape
             assert_allclose(np_output, expected[test_key])
-
 
 
 @keras_test
@@ -693,22 +691,22 @@ def test_upsampling_2d():
     input_num_col = 12
 
     inputs = {
-        'channels_first' : np.random.rand(num_samples, stack_size, input_num_row, input_num_col),
-        'channels_last'  : np.random.rand(num_samples, input_num_row, input_num_col, stack_size)
+        'channels_first': np.random.rand(num_samples, stack_size, input_num_row, input_num_col),
+        'channels_last': np.random.rand(num_samples, input_num_row, input_num_col, stack_size)
     }
     expected = {
-        'channels_first_repeat22' : _repeat(inputs['channels_first'], [1,1,2,2]),
-        'channels_first_repeat23' : _repeat(inputs['channels_first'], [1,1,2,3]),
-        'channels_first_repeat32' : _repeat(inputs['channels_first'], [1,1,3,2]),
-        'channels_first_zeros22'  : _interleave_zeros(inputs['channels_first'], [1,1,2,2]),
-        'channels_first_zeros23'  : _interleave_zeros(inputs['channels_first'], [1,1,2,3]),
-        'channels_first_zeros32'  : _interleave_zeros(inputs['channels_first'], [1,1,3,2]),
-        'channels_last_repeat22'  : _repeat(inputs['channels_last'], [1,2,2,1]),
-        'channels_last_repeat23'  : _repeat(inputs['channels_last'], [1,2,3,1]),
-        'channels_last_repeat32'  : _repeat(inputs['channels_last'], [1,3,2,1]),
-        'channels_last_zeros22'   : _interleave_zeros(inputs['channels_last'], [1,2,2,1]),
-        'channels_last_zeros23'   : _interleave_zeros(inputs['channels_last'], [1,2,3,1]),
-        'channels_last_zeros32'   : _interleave_zeros(inputs['channels_last'], [1,3,2,1])
+        'channels_first_repeat22': _repeat(inputs['channels_first'], [1, 1, 2, 2]),
+        'channels_first_repeat23': _repeat(inputs['channels_first'], [1, 1, 2, 3]),
+        'channels_first_repeat32': _repeat(inputs['channels_first'], [1, 1, 3, 2]),
+        'channels_first_zeros22': _interleave_zeros(inputs['channels_first'], [1, 1, 2, 2]),
+        'channels_first_zeros23': _interleave_zeros(inputs['channels_first'], [1, 1, 2, 3]),
+        'channels_first_zeros32': _interleave_zeros(inputs['channels_first'], [1, 1, 3, 2]),
+        'channels_last_repeat22': _repeat(inputs['channels_last'], [1, 2, 2, 1]),
+        'channels_last_repeat23': _repeat(inputs['channels_last'], [1, 2, 3, 1]),
+        'channels_last_repeat32': _repeat(inputs['channels_last'], [1, 3, 2, 1]),
+        'channels_last_zeros22': _interleave_zeros(inputs['channels_last'], [1, 2, 2, 1]),
+        'channels_last_zeros23': _interleave_zeros(inputs['channels_last'], [1, 2, 3, 1]),
+        'channels_last_zeros32': _interleave_zeros(inputs['channels_last'], [1, 3, 2, 1])
     }
 
     for data_format in ['channels_first', 'channels_last']:
@@ -720,7 +718,7 @@ def test_upsampling_2d():
                    input_shape=input.shape)
 
         for fill in ['repeat', 'zeros']:
-            for length_row, length_col in [ [2,2], [2,3], [3,2] ]:
+            for length_row, length_col in [[2, 2], [2, 3], [3, 2]]:
 
                 layer = convolutional.UpSampling2D(
                     size=(length_row, length_col),
@@ -730,8 +728,8 @@ def test_upsampling_2d():
                 outputs = layer(K.variable(input))
                 layer_output = K.eval(outputs)
 
-                expected_output = expected[data_format+'_'+fill+
-                                           str(length_row)+str(length_col)]
+                expected_output = expected[data_format + '_' + fill +
+                                           str(length_row) + str(length_col)]
 
                 assert layer_output.shape == expected_output.shape
                 assert_allclose(layer_output, expected_output)
@@ -747,24 +745,23 @@ def test_upsampling_3d():
     input_len_dim3 = 12
 
     inputs = {
-        'channels_first' : np.random.rand(num_samples, stack_size, input_len_dim1, input_len_dim2, input_len_dim3),
-        'channels_last'  : np.random.rand(num_samples, input_len_dim1, input_len_dim2, input_len_dim3, stack_size)
+        'channels_first': np.random.rand(num_samples, stack_size, input_len_dim1, input_len_dim2, input_len_dim3),
+        'channels_last': np.random.rand(num_samples, input_len_dim1, input_len_dim2, input_len_dim3, stack_size)
     }
     expected = {
-        'channels_first_repeat223' : _repeat(inputs['channels_first'], [1,1,2,2,3]),
-        'channels_first_repeat232' : _repeat(inputs['channels_first'], [1,1,2,3,2]),
-        'channels_first_repeat322' : _repeat(inputs['channels_first'], [1,1,3,2,2]),
-        'channels_first_zeros223'  : _interleave_zeros(inputs['channels_first'], [1,1,2,2,3]),
-        'channels_first_zeros232'  : _interleave_zeros(inputs['channels_first'], [1,1,2,3,2]),
-        'channels_first_zeros322'  : _interleave_zeros(inputs['channels_first'], [1,1,3,2,2]),
-        'channels_last_repeat223'  : _repeat(inputs['channels_last'], [1,2,2,3,1]),
-        'channels_last_repeat232'  : _repeat(inputs['channels_last'], [1,2,3,2,1]),
-        'channels_last_repeat322'  : _repeat(inputs['channels_last'], [1,3,2,2,1]),
-        'channels_last_zeros223'   : _interleave_zeros(inputs['channels_last'], [1,2,2,3,1]),
-        'channels_last_zeros232'   : _interleave_zeros(inputs['channels_last'], [1,2,3,2,1]),
-        'channels_last_zeros322'   : _interleave_zeros(inputs['channels_last'], [1,3,2,2,1])
+        'channels_first_repeat223': _repeat(inputs['channels_first'], [1, 1, 2, 2, 3]),
+        'channels_first_repeat232': _repeat(inputs['channels_first'], [1, 1, 2, 3, 2]),
+        'channels_first_repeat322': _repeat(inputs['channels_first'], [1, 1, 3, 2, 2]),
+        'channels_first_zeros223': _interleave_zeros(inputs['channels_first'], [1, 1, 2, 2, 3]),
+        'channels_first_zeros232': _interleave_zeros(inputs['channels_first'], [1, 1, 2, 3, 2]),
+        'channels_first_zeros322': _interleave_zeros(inputs['channels_first'], [1, 1, 3, 2, 2]),
+        'channels_last_repeat223': _repeat(inputs['channels_last'], [1, 2, 2, 3, 1]),
+        'channels_last_repeat232': _repeat(inputs['channels_last'], [1, 2, 3, 2, 1]),
+        'channels_last_repeat322': _repeat(inputs['channels_last'], [1, 3, 2, 2, 1]),
+        'channels_last_zeros223': _interleave_zeros(inputs['channels_last'], [1, 2, 2, 3, 1]),
+        'channels_last_zeros232': _interleave_zeros(inputs['channels_last'], [1, 2, 3, 2, 1]),
+        'channels_last_zeros322': _interleave_zeros(inputs['channels_last'], [1, 3, 2, 2, 1])
     }
-
 
     for data_format in ['channels_first', 'channels_last']:
 
@@ -775,7 +772,7 @@ def test_upsampling_3d():
                    input_shape=input.shape)
 
         for fill in ['repeat', 'zeros']:
-            for size_dim1, size_dim2, size_dim3 in [ [2,2,3], [2,3,2], [3,2,2] ]:
+            for size_dim1, size_dim2, size_dim3 in [[2, 2, 3], [2, 3, 2], [3, 2, 2]]:
                 layer = convolutional.UpSampling3D(
                     size=(size_dim1, size_dim2, size_dim3),
                     data_format=data_format,
@@ -784,8 +781,9 @@ def test_upsampling_3d():
                 outputs = layer(K.variable(input))
                 layer_output = K.eval(outputs)
 
-                expected_output = expected[ data_format + '_' + fill +
-                   str(size_dim1) + str(size_dim2) + str(size_dim3) ]
+                expected_output = expected[
+                    data_format + '_' + fill +
+                    str(size_dim1) + str(size_dim2) + str(size_dim3)]
 
                 assert layer_output.shape == expected_output.shape
                 assert_allclose(layer_output, expected_output)
