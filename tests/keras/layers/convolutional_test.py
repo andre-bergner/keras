@@ -746,46 +746,49 @@ def test_upsampling_3d():
     input_len_dim2 = 11
     input_len_dim3 = 12
 
-    for data_format in ['channels_first', 'channels_last']:
-        if data_format == 'channels_first':
-            inputs = np.random.rand(num_samples,
-                                    stack_size,
-                                    input_len_dim1, input_len_dim2, input_len_dim3)
-        else:  # tf
-            inputs = np.random.rand(num_samples,
-                                    input_len_dim1, input_len_dim2, input_len_dim3,
-                                    stack_size)
+    inputs = {
+        'channels_first' : np.random.rand(num_samples, stack_size, input_len_dim1, input_len_dim2, input_len_dim3),
+        'channels_last'  : np.random.rand(num_samples, input_len_dim1, input_len_dim2, input_len_dim3, stack_size)
+    }
+    expected = {
+        'channels_first_repeat223' : _repeat(inputs['channels_first'], [1,1,2,2,3]),
+        'channels_first_repeat232' : _repeat(inputs['channels_first'], [1,1,2,3,2]),
+        'channels_first_repeat322' : _repeat(inputs['channels_first'], [1,1,3,2,2]),
+        'channels_first_zeros223'  : _interleave_zeros(inputs['channels_first'], [1,1,2,2,3]),
+        'channels_first_zeros232'  : _interleave_zeros(inputs['channels_first'], [1,1,2,3,2]),
+        'channels_first_zeros322'  : _interleave_zeros(inputs['channels_first'], [1,1,3,2,2]),
+        'channels_last_repeat223'  : _repeat(inputs['channels_last'], [1,2,2,3,1]),
+        'channels_last_repeat232'  : _repeat(inputs['channels_last'], [1,2,3,2,1]),
+        'channels_last_repeat322'  : _repeat(inputs['channels_last'], [1,3,2,2,1]),
+        'channels_last_zeros223'   : _interleave_zeros(inputs['channels_last'], [1,2,2,3,1]),
+        'channels_last_zeros232'   : _interleave_zeros(inputs['channels_last'], [1,2,3,2,1]),
+        'channels_last_zeros322'   : _interleave_zeros(inputs['channels_last'], [1,3,2,2,1])
+    }
 
-        # basic test
+
+    for data_format in ['channels_first', 'channels_last']:
+
+        input = inputs[data_format]
+
         layer_test(convolutional.UpSampling3D,
                    kwargs={'size': (2, 2, 2), 'data_format': data_format},
-                   input_shape=inputs.shape)
+                   input_shape=input.shape)
 
         for fill in ['repeat', 'zeros']:
-            for length_dim1,length_dim2 in [ [2,2], [3,2] ]:
-                for length_dim3 in [3]:
-                    layer = convolutional.UpSampling3D(
-                        size=(length_dim1, length_dim2, length_dim3),
-                        data_format=data_format,
-                        fill=fill)
-                    layer.build(inputs.shape)
-                    outputs = layer(K.variable(inputs))
-                    np_output = K.eval(outputs)
+            for size_dim1, size_dim2, size_dim3 in [ [2,2,3], [2,3,2], [3,2,2] ]:
+                layer = convolutional.UpSampling3D(
+                    size=(size_dim1, size_dim2, size_dim3),
+                    data_format=data_format,
+                    fill=fill)
+                layer.build(input.shape)
+                outputs = layer(K.variable(input))
+                layer_output = K.eval(outputs)
 
-                    # compare with numpy
-                    if data_format == 'channels_first':
-                        if fill == 'repeat':
-                            expected_out = _repeat(inputs, [1,1,length_dim1,length_dim2,length_dim3])
-                        else:
-                            expected_out = _interleave_zeros(inputs, [1,1,length_dim1,length_dim2,length_dim3])
-                    else:  # tf
-                        if fill == 'repeat':
-                            expected_out = _repeat(inputs, [1,length_dim1,length_dim2,length_dim3,1])
-                        else:
-                            expected_out = _interleave_zeros(inputs, [1,length_dim1,length_dim2,length_dim3,1])
+                expected_output = expected[ data_format + '_' + fill +
+                   str(size_dim1) + str(size_dim2) + str(size_dim3) ]
 
-                    assert np_output.shape == expected_out.shape
-                    assert_allclose(np_output, expected_out)
+                assert layer_output.shape == expected_output.shape
+                assert_allclose(layer_output, expected_output)
 
 
 @keras_test
